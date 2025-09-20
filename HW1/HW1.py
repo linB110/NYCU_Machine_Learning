@@ -76,10 +76,6 @@ label_train_set_ver = data_train_set_ver["target"].to_numpy()
 label_train_set_vir = data_train_set_vir["target"].to_numpy()
 label_train_ver_vir = data_train_ver_vir["target"].to_numpy()
 
-data_train_set_ver = data_train_set_ver[training_feature].to_numpy()
-data_train_set_vir = data_train_set_vir[training_feature].to_numpy()
-data_train_ver_vir = data_train_ver_vir[training_feature].to_numpy()
-
 data_test_set_ver = pd.concat([setosa_data[25:50], versicolor_data[25:50]], ignore_index=True)
 data_test_set_vir = pd.concat([setosa_data[25:50], virginica_data[25:50]], ignore_index=True)
 data_test_ver_vir = pd.concat([versicolor_data[25:50], virginica_data[25:50]], ignore_index=True)
@@ -88,15 +84,12 @@ label_test_set_ver = data_test_set_ver["target"].to_numpy()
 label_test_set_vir = data_test_set_vir["target"].to_numpy()
 label_test_ver_vir = data_test_ver_vir["target"].to_numpy()
 
-data_test_set_ver = data_test_set_ver[training_feature].to_numpy()
-data_test_set_vir = data_test_set_vir[training_feature].to_numpy()
-data_test_ver_vir = data_test_ver_vir[training_feature].to_numpy()
+
 
 # ====== splitting dataset (trinary classification) =======
 # training dataset
 data_train = pd.concat([setosa_data[0:25], versicolor_data[0:25], virginica_data[0:25]], ignore_index=True)
 label_train = data_train["target"].to_numpy()
-data_train = data_train[training_feature].to_numpy()
 # print("=========")
 # print(data_train)
 # print("=========")
@@ -108,7 +101,6 @@ data_train = data_train[training_feature].to_numpy()
 # testing dataset
 data_test = pd.concat([setosa_data[25:50], versicolor_data[25:50], virginica_data[25:50]], ignore_index=True)
 label_test = data_test["target"].to_numpy()
-data_test = data_test[training_feature].to_numpy()
 
 def classifier_rate(ground_truth, predictions) :
     counter = 0
@@ -132,44 +124,56 @@ def two_fold_cv_knn(k, X_train, y_train, X_test, y_test):
 
     return acc1, acc2, (acc1 + acc2) / 2.0
 
-print("============= Binary classification ============")
+for feature in training_feature : 
+    X_train_set_ver = data_train_set_ver.loc[:, feature].to_numpy()
+    X_train_set_vir = data_train_set_vir.loc[:, feature].to_numpy()
+    X_train_ver_vir = data_train_ver_vir.loc[:, feature].to_numpy()
+    
+    X_test_set_ver = data_test_set_ver.loc[:, feature].to_numpy()
+    X_test_set_vir = data_test_set_vir.loc[:, feature].to_numpy()
+    X_test_ver_vir = data_test_ver_vir.loc[:, feature].to_numpy()
+    
+    X_train = data_train.loc[:, feature].to_numpy()
+    X_test = data_test.loc[:, feature].to_numpy()
+    
+    print("============= Binary classification ============")
 
-# ---------- setosa vs versicolor ----------
-print("[setosa vs versicolor]  features =", training_feature)
-# 1-NN
-acc1, acc2, avg = two_fold_cv_knn(1, data_train_set_ver, label_train_set_ver, data_test_set_ver, label_test_set_ver)
-print(f"1-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
-# 3-NN
-acc1, acc2, avg = two_fold_cv_knn(3, data_train_set_ver, label_train_set_ver, data_test_set_ver, label_test_set_ver)
-print(f"3-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
-print("-" * 55)
+    # ---------- setosa vs versicolor ----------
+    print("[setosa vs versicolor]  features =", feature)
+    # 1-NN
+    acc1, acc2, avg = two_fold_cv_knn(1, X_train_set_ver, label_train_set_ver, X_test_set_ver, label_test_set_ver)
+    print(f"1-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
+    # 3-NN
+    acc1, acc2, avg = two_fold_cv_knn(3, X_train_set_ver, label_train_set_ver, X_test_set_ver, label_test_set_ver)
+    print(f"3-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
+    print("-" * 55)
 
-# ---------- setosa vs virginica ----------
-print("[setosa vs virginica]  features =", training_feature)
-# 1-NN
-acc1, acc2, avg = two_fold_cv_knn(1, data_train_set_vir, label_train_set_vir, data_test_set_vir, label_test_set_vir)
-print(f"1-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
-# 3-NN
-acc1, acc2, avg = two_fold_cv_knn(3, data_train_set_vir, label_train_set_vir, data_test_set_vir, label_test_set_vir)
-print(f"3-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
-print("-" * 55)
+    # ---------- setosa vs virginica ----------
+    print("[setosa vs virginica]  features =", feature)
+    # 1-NN
+    acc1, acc2, avg = two_fold_cv_knn(1, X_train_set_vir, label_train_set_vir, X_test_set_vir, label_test_set_vir)
+    print(f"1-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
+    # 3-NN
+    acc1, acc2, avg = two_fold_cv_knn(3, X_train_set_vir, label_train_set_vir, X_test_set_vir, label_test_set_vir)
+    print(f"3-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
+    print("-" * 55)
 
-# ---------- versicolor vs virginica ----------
-print("[versicolor vs virginica]  features =", training_feature)
-# 1-NN
-acc1, acc2, avg = two_fold_cv_knn(1, data_train_ver_vir, label_train_ver_vir, data_test_ver_vir, label_test_ver_vir)
-print(f"1-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
-# 3-NN
-acc1, acc2, avg = two_fold_cv_knn(3, data_train_ver_vir, label_train_ver_vir, data_test_ver_vir, label_test_ver_vir)
-print(f"3-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
-print("==================================================\n")
+    # ---------- versicolor vs virginica ----------
+    print("[versicolor vs virginica]  features =", feature)
+    # 1-NN
+    acc1, acc2, avg = two_fold_cv_knn(1, X_train_ver_vir, label_train_ver_vir, X_test_ver_vir, label_test_ver_vir)
+    print(f"1-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
+    # 3-NN
+    acc1, acc2, avg = two_fold_cv_knn(3, X_train_ver_vir, label_train_ver_vir, X_test_ver_vir, label_test_ver_vir)
+    print(f"3-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
+    print("==================================================\n")
 
-print("============= Trinary classification ============")
-
-# 1-NN
-acc1, acc2, avg = two_fold_cv_knn(1, data_train, label_train, data_test, label_test)
-print(f"1-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
-# 3-NN
-acc1, acc2, avg = two_fold_cv_knn(3, data_train, label_train, data_test, label_test)
-print(f"3-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
-print("==================================================\n")
+    print("============= Trinary classification ============")
+    print("features =", feature)
+    # 1-NN
+    acc1, acc2, avg = two_fold_cv_knn(1, X_train, label_train, X_test, label_test)
+    print(f"1-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
+    # 3-NN
+    acc1, acc2, avg = two_fold_cv_knn(3, X_train, label_train, X_test, label_test)
+    print(f"3-NN  CR1: {acc1:.4f}  CR2: {acc2:.4f}  2-fold avg: {avg:.4f}")
+    print("==================================================\n")
