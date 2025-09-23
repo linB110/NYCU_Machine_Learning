@@ -84,7 +84,16 @@ class LDA_classifier :
         self.model_bias = bias
         
         return weight, bias
-        
+    
+    def training_setting(self, data, label, pos_penalty=0.5, neg_penalty=0.5):
+        self.mean_vector(data, label)
+        self.priori_probability()
+        self.cov_mat()
+        self.decision_boundary(pos_penalty, neg_penalty)
+        self._fitted = True
+
+        return self.model_weight, self.model_bias
+    
     def predict(self, input_data) : 
         c1, c2 = self.c1 ,self.c2
         input_data = np.asarray(input_data)
@@ -93,12 +102,34 @@ class LDA_classifier :
         pred_label = []
         w, b = self.decision_boundary(c1, c2)
         
-        for x in input_data : 
+        pred_label = []
+        for x in input_data:
             score = np.dot(w, x) + b
+            pred_label.append(self.labels[0] if score > 0 else self.labels[1])
             
-            if (score > 0) : 
-                pred_label.append(0)
-            else : 
-                pred_label.append(1)
-                
-        return pred_label
+        return np.asarray(pred_label)
+    
+# test data                   
+# X = ([1,2],[2,5],[3,2],[-4,-7],[-3,-2],[-2,0])
+# y = ([0,0,0,1,1,1])
+
+# LDA = LDA_classifier()
+# mean_vec = LDA.mean_vector(X, y)
+# print("mean : ", mean_vec)  # expect [2,3], [-3,-3]
+# #print("cov : ", LDA.cov_mat()) # expect  [ [1, 1.75],[1.75, 8] ]
+
+# prob = LDA.priori_probability()
+# #print(prob)
+
+# cov = LDA.cov_mat()
+
+# weight = LDA.decision_boundary(1,1) # expect weight : [5.9747, -0.557] bias : 2.9873
+
+# x_test = ([2,2], [1,1], [-1,-2],[-3,-5],[-1,-6])
+# y_test = [0,0,1,1,1]
+
+
+# LDA = LDA_classifier()
+# LDA.training_setting(X, y, pos_penalty=0.5, neg_penalty=0.5)
+# pred = LDA.predict(x_test)
+# print("pred:", pred)
