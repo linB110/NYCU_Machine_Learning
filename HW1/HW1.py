@@ -1,7 +1,8 @@
 # import necessary lib such as calculation ,plotting...
 import pandas as pd
 import matplotlib.pyplot as plt
-from HW1_KNN import *
+from HW1_KNN import KNN_classifier
+from HW1_LDA import LDA_classifier
 
 # loading dataset
 from sklearn import datasets
