@@ -44,40 +44,45 @@ def compute_classification_rate(ground_truth, prediction):
     
     return cr/len(ground_truth)
 
+# analysis parameter
+linear_penalty_weight = [1.0, 10.0, 100.0]
+rbf_sigma = [5, 1, 0.5, 0.1, 0.05]
+poly_power = [1, 2, 3, 4, 5]
     
-# prediction of linear SVM
-linear_svm = SVM_classifier(1.0, kernel_function="linear")
-linear_svm.set_training_data(train_data=training_data, train_label=training_lbl)
-linear_result = compute_classification_rate(testing_lbl, linear_svm.model_fit(testing_data))
+# ====== linear SVM ====== 
+# penalty_weight = 1.0
+for i in range(len(linear_penalty_weight)):
+    linear_svm = SVM_classifier(penalty_weight=linear_penalty_weight[i], kernel_function="linear")
+    linear_svm.set_training_data(train_data=training_data, train_label=training_lbl)
+    linear_result = compute_classification_rate(testing_lbl, linear_svm.model_fit(testing_data))
+    print("classification rate of linear SVM with penalty weight of " + str(linear_penalty_weight[i]) + ": ", linear_result)
+    linear_svm.plot_2d(X_test=testing_data.values, y_test=testing_lbl,
+                    title="Linear SVM: OSH ", show_margins=True, feature=feature, description="penalty weight=" + str(linear_penalty_weight[i]))
 
-# prediction of RBF SVM
-rbf_svm = SVM_classifier(1.0, kernel_function="RBF", sigma=5)
-rbf_svm.set_training_data(train_data=training_data, train_label=training_lbl)
-rbf_result = compute_classification_rate(testing_lbl, rbf_svm.model_fit(testing_data))
+# ======  RBF SVM ====== 
+for i in range(len(rbf_sigma)):
+    rbf_svm = SVM_classifier(penalty_weight=10.0, kernel_function="RBF", sigma=rbf_sigma[i])
+    rbf_svm.set_training_data(train_data=training_data, train_label=training_lbl)
+    rbf_result = compute_classification_rate(testing_lbl, rbf_svm.model_fit(testing_data))
+    print("classification rate of RBF SVM with sigma of " + str(rbf_sigma[i]) + ": ", rbf_result)
+    rbf_svm.plot_2d(X_test=testing_data.values, y_test=testing_lbl,
+                    title="RBF SVM: decision regions", show_margins=False, feature=feature, description="sigma=" + str(rbf_sigma[i]))
 
-# prediction of polynomial SVM
-poly_svm = SVM_classifier(1.0, kernel_function="polynomial", power=2)
-poly_svm.set_training_data(train_data=training_data, train_label=training_lbl)
-poly_result = compute_classification_rate(testing_lbl, poly_svm.model_fit(testing_data))
+# # ====== polynomial SVM ====== 
+for i in range(len(poly_power)):
+    poly_svm = SVM_classifier(penalty_weight=1.0, kernel_function="polynomial", power=poly_power[i])
+    poly_svm.set_training_data(train_data=training_data, train_label=training_lbl)
+    poly_result = compute_classification_rate(testing_lbl, poly_svm.model_fit(testing_data))
+    print("classification rate of polynomial SVM with power of " + str(poly_power[i]) + ": ", poly_result)
+    poly_svm.plot_2d(X_test=testing_data.values, y_test=testing_lbl,
+                    title="Polynomial SVM: decision regions", show_margins=False, feature=feature, description="power=" + str(poly_power[i]))
 
-print("linear : ", linear_result)
-print("RBF : ", rbf_result)
-print("poly :  ", poly_result)
+# # test
+# # t1 = testing_data[feature].iloc[0].values.reshape(1, -1)
+# # l1 = testing_lbl[0]
+# # print("Sample:", t1, "Label:", l1)
+# # res = svm.model_fit(t1)
+# # print("Predicted:", res)
 
 
-# test
-# t1 = testing_data[feature].iloc[0].values.reshape(1, -1)
-# l1 = testing_lbl[0]
-# print("Sample:", t1, "Label:", l1)
-# res = svm.model_fit(t1)
-# print("Predicted:", res)
 
-
-linear_svm.plot_2d(X_test=testing_data.values, y_test=testing_lbl,
-                   title="Linear SVM: OSH ", show_margins=True, feature=feature)
-
-rbf_svm.plot_2d(X_test=testing_data.values, y_test=testing_lbl,
-                title="RBF SVM: decision regions", show_margins=False, feature=feature)
-
-poly_svm.plot_2d(X_test=testing_data.values, y_test=testing_lbl,
-                 title="Polynomial SVM: decision regions", show_margins=False, feature=feature)
