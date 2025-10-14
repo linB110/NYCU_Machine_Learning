@@ -151,7 +151,7 @@ class SVM_classifier:
         K_test = self._kernel_matrix(self.train_data, np.asarray(X, dtype=float))  
         return (self.alpha * self.train_label) @ K_test + self.bias  # (n,)
 
-    def plot_2d(self, X_test=None, y_test=None, title=None, show_margins=True, mesh_step=0.02):
+    def plot_2d(self, X_test=None, y_test=None, title=None, show_margins=True, feature=None, description=None):
         self._ensure_trained()
         X_tr = self.train_data
         y_tr = self.train_label
@@ -164,52 +164,64 @@ class SVM_classifier:
         x_min, x_max = X_all[:, 0].min() - 0.5, X_all[:, 0].max() + 0.5
         y_min, y_max = X_all[:, 1].min() - 0.5, X_all[:, 1].max() + 0.5
 
-        xx, yy = np.meshgrid(np.arange(x_min, x_max, mesh_step),
-                             np.arange(y_min, y_max, mesh_step))
+        xx, yy = np.meshgrid(
+            np.linspace(x_min, x_max, 300),
+            np.linspace(y_min, y_max, 300)
+        )
         grid = np.c_[xx.ravel(), yy.ravel()]
         zz = self.decision_function(grid).reshape(xx.shape)
 
-        plt.figure(figsize=(8, 6))
+        plt.figure(figsize=(7, 5))
+        plt.contour(xx, yy, zz, levels=[0], colors='k', linewidths=2, linestyles='-')
+        plt.contour(xx, yy, zz, levels=[-1, 1], colors='gray', linewidths=1, linestyles='--')
 
-        plt.contourf(xx, yy, zz, levels=50, alpha=0.25)
+        # plotting training data
+        plt.scatter(
+            X_tr[y_tr == 1, 0], X_tr[y_tr == 1, 1],
+            color='blue', label='Train +1', marker='o', edgecolors='k'
+        )
+        plt.scatter(
+            X_tr[y_tr == -1, 0], X_tr[y_tr == -1, 1],
+            color='red', label='Train -1', marker='x'
+        )
 
-        cs = plt.contour(xx, yy, zz, levels=[0], linewidths=2)
-        cs.collections[0].set_label('Decision boundary')
-
-        plt.scatter(X_tr[y_tr == 1, 0], X_tr[y_tr == 1, 1], marker='o', label='Train +1', edgecolors='k')
-        plt.scatter(X_tr[y_tr == -1, 0], X_tr[y_tr == -1, 1], marker='x', label='Train -1')
-
+        # plotting test data
         if X_test is not None and y_test is not None:
             X_te = np.asarray(X_test, dtype=float)
             y_te = np.asarray(y_test, dtype=float)
-            plt.scatter(X_te[y_te == 1, 0], X_te[y_te == 1, 1], marker='o', facecolors='none', edgecolors='k', label='Test +1')
-            plt.scatter(X_te[y_te == -1, 0], X_te[y_te == -1, 1], marker='x', label='Test -1', linewidths=2)
+            plt.scatter(
+                X_te[y_te == 1, 0], X_te[y_te == 1, 1],
+                color='cyan', label='Test +1', marker='o', edgecolors='k'
+            )
+            plt.scatter(
+                X_te[y_te == -1, 0], X_te[y_te == -1, 1],
+                color='orange', label='Test -1', marker='x'
+            )
 
-        sv_idx = alpha > 1e-8
-        plt.scatter(X_tr[sv_idx, 0], X_tr[sv_idx, 1], s=120, facecolors='none', edgecolors='k', linewidths=1.5, label='Support Vectors')
-
-        # plotting OSH
+        # plotting OSH and region for linear SVM
         if self.kernel_function == "linear" and show_margins:
-            # W = sum_i alpha_i y_i x_i
-            W = np.sum((alpha * y_tr)[:, None] * X_tr, axis=0)  
+            W = np.sum((alpha * y_tr)[:, None] * X_tr, axis=0)
             b = self.bias
-            
             xs = np.linspace(x_min, x_max, 400)
             ys = -(W[0] * xs + b) / W[1]
             ys_m1 = -(W[0] * xs + b - 1) / W[1]
             ys_p1 = -(W[0] * xs + b + 1) / W[1]
-            plt.plot(xs, ys, 'k-', linewidth=2, label='OSH (linear)')
+            plt.plot(xs, ys, 'k-', linewidth=2)
             plt.plot(xs, ys_m1, 'k--', linewidth=1)
             plt.plot(xs, ys_p1, 'k--', linewidth=1)
-
-        plt.xlim(x_min, x_max)
-        plt.ylim(y_min, y_max)
-        plt.xlabel("Feature 1")
-        plt.ylabel("Feature 2")
+        
+        plt.xlabel(str(feature[0]))
+        plt.ylabel(str(feature[1]))
         plt.title(title or f"SVM ({self.kernel_function}) decision boundary")
-        plt.legend(loc='best')
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()
     
+        if description:
+            plt.figtext(0.02, 0.98, description, wrap=True, fontsize=10, ha='left', va='top')
+        
+        plt.legend(loc='best')
+        plt.grid(True, linestyle=':', linewidth=0.6)
+        plt.subplots_adjust(bottom=0.2)  
+        plt.show()
+        plt.show()
+
+        
 
