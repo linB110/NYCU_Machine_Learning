@@ -1,5 +1,6 @@
 import numpy as np
 from qpsolvers import solve_qp
+import matplotlib.pyplot as plt
 
 # SVM classifier
 # W     : model weight vector
@@ -16,38 +17,46 @@ from qpsolvers import solve_qp
 #   y_i * (Wᵀx_i + b) ≥ 1 - ζ_i
 #   ζ_i ≥ 0 ,  for all i = 1 to N
 class SVM_classifier:
-    def __init__(self, penalty_weight, kernel_function = "linear", sigma = 1.0, power = 1):
+    def __init__(self, penalty_weight, kernel_function="linear", sigma=1.0, power=1):
         self.penalty_weight = float(penalty_weight)
         self.kernel_function = kernel_function
         self.sigma = float(sigma)
         self.power = int(power)
-        
+
         self.train_data = None
         self.train_label = None
         self.alpha = None
         self.K = None
-    
+        self.bias = None
+
     def set_training_data(self, train_data, train_label):
-        self.train_data = np.asarray(train_data)
-        self.train_label = np.asarray(train_label)
-    
-        # clear old training result
+        self.train_data = np.asarray(train_data, dtype=float)
+        self.train_label = np.asarray(train_label, dtype=float).flatten()
+        
+        # clear previous training result
         self.alpha = None
         self.K = None
-        self.bias_ = None
-        
-    def linear_kernel(self, x_i, x_j):
-        return float(np.dot(x_i, x_j))
-    
-    def RBF_kernel(self, x_i, x_j, sigma = 1.0):
-        gamma = 1.0 / (2.0 * sigma**2)
-        diff = x_i - x_j
-        
-        return float(np.exp(-gamma * np.dot(diff, diff))) 
-    
-    def polynomial_kernel(self, x_i, x_j, power):        
-        return float((1.0 + np.dot(x_i, x_j)) ** power)
-        
+        self.bias = None
+
+    # generate kernel matrix
+    def _kernel_matrix(self, X1, X2):
+        if self.kernel_function == "linear":
+            return X1 @ X2.T                                   
+
+        elif self.kernel_function == "polynomial":
+            return (1.0 + X1 @ X2.T) ** self.power           
+
+        elif self.kernel_function == "RBF":
+            X1_sq = np.sum(X1**2, axis=1, keepdims=True)      
+            X2_sq = np.sum(X2**2, axis=1, keepdims=True).T    
+            dist2 = X1_sq - 2.0 * (X1 @ X2.T) + X2_sq         # avoid 2-layer for loop time consumption operation
+            gamma = 1.0 / (2.0 * self.sigma**2)
+            
+            return np.exp(-gamma * dist2)                     
+
+        else:
+            raise ValueError(f"Unknown kernel {self.kernel_function}")
+
     # solve dual problem for α 
     # φ(x) : feature mapping function
     # K(x_i, x_j) = x_i.T * x_j
@@ -55,92 +64,152 @@ class SVM_classifier:
     # minimize SumiN SumjN α_i * α_j * y_i * y_j * x_i.T * x_j
     # subject to SumiN α_i * y_i = 0 and 0 <= α_i <= C for all i
     def solve_Lagrange_multiplier(self):
-        x = np.asarray(self.train_data)
-        y = np.asarray(self.train_label)
-        
+        X = self.train_data
+        y = self.train_label
         N = len(y)
         C = self.penalty_weight
-        kernel_type = self.kernel_function
-        
-        K = 0 # inner product of mapped data
-        if (kernel_type == "linear"):
-            K = self.linear_kernel(x, x)
-        elif (kernel_type == "RBF"):
-            K = self.RBF_kernel(x, x, self.sigma)
-        elif (kernel_type == "polynomial"):
-            K = self.polynomial_kernel(x, x, self.power)
-         
-        self.K = K # restore K value for further usage
-        
-        Y = np.outer(y, y)
+
+        K = self._kernel_matrix(X, X)         
+        self.K = K
+
+        Y = np.outer(y, y)                     
         Q = Y * K
-        Q = (Q + Q.T) / 2 # symmetric matrix
-        
-        q = -np.ones(len(y))
-        A = y.reshape(1, -1)
+        Q = (Q + Q.T) / 2.0                    
+
+        q = -np.ones(N)
+        A = y.reshape(1, -1)                   
         b = np.array([0.0])
-        
-        lower_bound = np.zeros(len(y))
-        upper_bound = np.full(len(y), C)
-        
-        # solve quadratic programming
-        alpha = solve_qp(P=Q, q=q, A=A, b=b, lb=lower_bound, ub=upper_bound, solver="osqp")
-        
-        return alpha        
-    
+
+        lb = np.zeros(N)
+        ub = np.full(N, C)
+
+        alpha = solve_qp(P=Q, q=q, A=A, b=b, lb=lb, ub=ub, solver="osqp")
+        if alpha is None:
+            raise RuntimeError("QP solver failed to find a solution.")
+        self.alpha = alpha
+        return alpha
+
     # optimal model bias is computed follow by formula below
     # b* = 1/y_k - SiN α_i * y_i * K(x_i, x_k)  where x_k is training data for 0 < α_k < K
     def calculate_model_bias(self):
-        a = np.asarray(self.solve_Lagrange_multiplier())
-        y = np.asarray(self.train_label)
-        
-        # take 0 < α < C (penalty_weight)
-        support_idx = (a > 1e-6) & (a < self.penalty_weight - 1e-6)
-        
-        if len(support_idx) > 0:
-            b_list = []
-            for i in np.where(support_idx)[0]:
-                b_i = y[i] - np.sum(a * y * self.K[:, i])
-                b_list.append(b_i)
-            optimal_bias = np.mean(b_list)
-        else:
-            i = int(np.argmax(a))
-            optimal_bias =  y[i] - np.sum(a * y * self.K[:, i])
-                    
-        return optimal_bias
-    
-    def model_fit(self, input_data):
         if self.alpha is None:
-            alpha = self.solve_Lagrange_multiplier()
-        if self.bias_ is None:
-            bias = self.calculate_model_bias()
-            
-        kernel_type = self.kernel_function
-        y = np.asarray(self.train_label)
-        x_i = np.asarray(self.train_data)
-        x_j = np.asarray(input_data)
-        
-        result = []
-        K = 0 # inner product of mapped data
-        for k in range(len(x_i)):
-            decision = 0
+            self.solve_Lagrange_multiplier()
 
-            for n in range(len(input_data)):
-                if (kernel_type == "linear"):
-                    K = self.linear_kernel(x_i[n], x_j[k])
-                elif (kernel_type == "RBF"):
-                    K = self.RBF_kernel(x_i[n], x_j[k], self.sigma)
-                elif (kernel_type == "polynomial"):
-                    K = self.polynomial_kernel(x_i[n], x_j[k], self.power)
-                    
-                decision += alpha[n] * y[n] * K 
-            
-            decision += bias
+        a = self.alpha
+        y = self.train_label
+        C = self.penalty_weight
+
+        # take 0 < α < C (penalty_weight)
+        support_idx = (a > 1e-8) & (a < C - 1e-8)
+        if np.any(support_idx):
+            idxs = np.where(support_idx)[0]
+            b_vals = []
+            for k in idxs:
+                b_k = y[k] - np.sum(a * y * self.K[:, k])
+                b_vals.append(b_k)
+            b_opt = float(np.mean(b_vals))
+        else:
+            k = int(np.argmax(a))
+            b_opt = float(y[k] - np.sum(a * y * self.K[:, k]))
+
+        self.bias = b_opt
+        return b_opt
+
+    # classification
+    def model_fit(self, input_data):
+        X_train = self.train_data
+        y = self.train_label
+        X_test = np.asarray(input_data, dtype=float)
+
+        if self.alpha is None:
+            self.solve_Lagrange_multiplier()
+        if self.bias is None:
+            self.calculate_model_bias()
+
+        result = []
+
+        # D(x) = Σ α_i y_i K(x_i, x_test) + b
+        for j in range(len(X_test)):
+            K_vec = self._kernel_matrix(X_train, X_test[j:j+1])  # shape = (N_train, 1)
+
+            # SVM decision function
+            decision = np.sum(self.alpha * y * K_vec[:, 0]) + self.bias
+
             result.append(1) if decision >= 0 else result.append(-1)
-        
+
         return result
-        
+    
+    ### visualization of hyperplane 
+    def _ensure_trained(self):
+        if self.alpha is None:
+            self.solve_Lagrange_multiplier()
+        if getattr(self, "bias", None) is None: 
+            self.calculate_model_bias()
+
+    def decision_function(self, X):
+        self._ensure_trained()
+        K_test = self._kernel_matrix(self.train_data, np.asarray(X, dtype=float))  
+        return (self.alpha * self.train_label) @ K_test + self.bias  # (n,)
+
+    def plot_2d(self, X_test=None, y_test=None, title=None, show_margins=True, mesh_step=0.02):
+        self._ensure_trained()
+        X_tr = self.train_data
+        y_tr = self.train_label
+        alpha = self.alpha
+
+        if X_test is not None:
+            X_all = np.vstack([X_tr, np.asarray(X_test, dtype=float)])
+        else:
+            X_all = X_tr
+        x_min, x_max = X_all[:, 0].min() - 0.5, X_all[:, 0].max() + 0.5
+        y_min, y_max = X_all[:, 1].min() - 0.5, X_all[:, 1].max() + 0.5
+
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, mesh_step),
+                             np.arange(y_min, y_max, mesh_step))
+        grid = np.c_[xx.ravel(), yy.ravel()]
+        zz = self.decision_function(grid).reshape(xx.shape)
+
+        plt.figure(figsize=(8, 6))
+
+        plt.contourf(xx, yy, zz, levels=50, alpha=0.25)
+
+        cs = plt.contour(xx, yy, zz, levels=[0], linewidths=2)
+        cs.collections[0].set_label('Decision boundary')
+
+        plt.scatter(X_tr[y_tr == 1, 0], X_tr[y_tr == 1, 1], marker='o', label='Train +1', edgecolors='k')
+        plt.scatter(X_tr[y_tr == -1, 0], X_tr[y_tr == -1, 1], marker='x', label='Train -1')
+
+        if X_test is not None and y_test is not None:
+            X_te = np.asarray(X_test, dtype=float)
+            y_te = np.asarray(y_test, dtype=float)
+            plt.scatter(X_te[y_te == 1, 0], X_te[y_te == 1, 1], marker='o', facecolors='none', edgecolors='k', label='Test +1')
+            plt.scatter(X_te[y_te == -1, 0], X_te[y_te == -1, 1], marker='x', label='Test -1', linewidths=2)
+
+        sv_idx = alpha > 1e-8
+        plt.scatter(X_tr[sv_idx, 0], X_tr[sv_idx, 1], s=120, facecolors='none', edgecolors='k', linewidths=1.5, label='Support Vectors')
+
+        # plotting OSH
+        if self.kernel_function == "linear" and show_margins:
+            # W = sum_i alpha_i y_i x_i
+            W = np.sum((alpha * y_tr)[:, None] * X_tr, axis=0)  
+            b = self.bias
             
-                
-            
-        
+            xs = np.linspace(x_min, x_max, 400)
+            ys = -(W[0] * xs + b) / W[1]
+            ys_m1 = -(W[0] * xs + b - 1) / W[1]
+            ys_p1 = -(W[0] * xs + b + 1) / W[1]
+            plt.plot(xs, ys, 'k-', linewidth=2, label='OSH (linear)')
+            plt.plot(xs, ys_m1, 'k--', linewidth=1)
+            plt.plot(xs, ys_p1, 'k--', linewidth=1)
+
+        plt.xlim(x_min, x_max)
+        plt.ylim(y_min, y_max)
+        plt.xlabel("Feature 1")
+        plt.ylabel("Feature 2")
+        plt.title(title or f"SVM ({self.kernel_function}) decision boundary")
+        plt.legend(loc='best')
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
+    
+
