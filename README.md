@@ -57,8 +57,6 @@ Apply SVM models with different kernel functions on the Iris dataset and compute
 2. Use the same data split strategy 
 3. Compare CR results across all SVM kernels to analyze performance differences
 
----
-
 ## 📊 Results
 
 * Display classification rate (CR) for each model
@@ -74,14 +72,15 @@ Perform **grid search** on the **RBF kernel SVM** to determine the best combinat
 
 ### Procedure
 
-1. Use the same **Iris dataset** setup from HW2 (binary classification between *Versicolor* and *Virginica*).  
-2. Define:
+1. Use the same **Iris dataset** setup from HW2 (binary classification between *Versicolor* and *Virginica*).
+2. Feature selection is all four features `["sepal length (cm)", "sepal width (cm)", "petal length (cm)", "petal width (cm)"]`
+3. Define:
    - `penalty_weight = [1.0, 5.0, 10.0, 50.0, 100.0, 500.0, 1000.0]`
    - `sigma = 1.05^i` where `i ∈ [-100, 100]` in steps of 5  
-3. Perform **2-Fold Cross Validation (CV)** for each `(C, σ)` pair:
+4. Perform **2-Fold Cross Validation (CV)** for each `(C, σ)` pair:
    - Train SVM on one fold, test on the other, then swap.
    - Compute the average CR from both folds.
-4. Record all results and identify the **best parameter set**.
+5. Record all results and identify the **best parameter set**.
 
 ### Implementation Details
 
