@@ -65,3 +65,30 @@ Apply SVM models with different kernel functions on the Iris dataset and compute
 
 ---
 
+
+## ⚙️ HW3 — RBF-SVM Parameter Tuning (Grid Search)
+
+### Objective
+
+Perform **grid search** on the **RBF kernel SVM** to determine the best combination of **penalty weight (C)** and **kernel width (σ)** parameters that maximize the classification rate (CR).
+
+### Procedure
+
+1. Use the same **Iris dataset** setup from HW2 (binary classification between *Versicolor* and *Virginica*).  
+2. Define:
+   - `penalty_weight = [1.0, 5.0, 10.0, 50.0, 100.0, 500.0, 1000.0]`
+   - `sigma = 1.05^i` where `i ∈ [-100, 100]` in steps of 5  
+3. Perform **2-Fold Cross Validation (CV)** for each `(C, σ)` pair:
+   - Train SVM on one fold, test on the other, then swap.
+   - Compute the average CR from both folds.
+4. Record all results and identify the **best parameter set**.
+
+### Implementation Details
+
+* Custom `SVM_classifier` (from **HW2**) with `RBF` kernel  
+* Nested loops iterate through each `C`–`σ` combination  
+* Compute accuracy and print results with two-decimal precision  
+* Track and display the best configuration with highest CR
+
+---
+
