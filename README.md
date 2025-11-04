@@ -72,7 +72,7 @@ Perform **grid search** on the **RBF kernel SVM** to determine the best combinat
 
 ### Procedure
 
-1. Use the same **Iris dataset** setup from HW2 (binary classification between *Versicolor* and *Virginica*).
+1. Use the all three classes in `iris dataset`
 2. Feature selection is all four features `["sepal length (cm)", "sepal width (cm)", "petal length (cm)", "petal width (cm)"]`
 3. Define:
    - `penalty_weight = [1.0, 5.0, 10.0, 50.0, 100.0, 500.0, 1000.0]`
