@@ -1,0 +1,140 @@
+import numpy as np
+import math
+
+# ====== LDA classifier ======
+# LDA : D(x) = W^T*X + b 
+# step 1 calculate mean vector
+# step 2 calculate covariance matrix
+# step 3 calculate priori probability of each class
+# step 4 setting penalty weight 
+# step 5 calculate model's weight
+# step 6 calculate model's bias
+
+class LDA_classifier : 
+    def __init__(self) :
+        pass
+    
+    def mean_vector(self, data, label) :
+        data = np.asarray(data)
+        label = np.asarray(label)
+        labels = np.unique(label)
+        
+        self.data = data
+        self.label = label
+        self.labels = labels
+        self.lbl2idx = {lab: i for i, lab in enumerate(labels)}
+        
+        mean_vec = [] 
+        for l in labels :
+            mean_vec.append(np.mean(data[label == l], axis = 0))
+            
+        self.mean_vec = np.asarray(mean_vec)    
+        return mean_vec
+    
+    def priori_probability(self) : 
+        data = self.data
+        label = self.label
+        labels = self.labels
+        priori_prob = []
+        
+        for l in labels:
+            n_i = data[label == l].shape[0] 
+            priori_prob.append(n_i / data.shape[0])
+            self.priori_prob = np.asarray(priori_prob, dtype=float)
+            
+        self.priori_prob = priori_prob
+        
+            
+    def cov_mat(self) :
+        data = self.data
+        label = self.label
+        labels = self.labels
+        mean_vec = self.mean_vec
+        
+        covariance_mat = []  # variance matrix for each label
+        total_covariance = np.zeros((data.shape[1], data.shape[1]), dtype=float)  # covariance matrix
+        
+        for l in labels:
+            idx = self.lbl2idx[l]                     # label : index correspondance
+            Xc = data[label == l] - mean_vec[idx]    
+            n_i = Xc.shape[0]
+            
+            if n_i <= 1:
+                continue
+            
+            cov_i = (Xc.T @ Xc) / (n_i - 1)
+            weighted_cov_i = (n_i / data.shape[0]) * cov_i
+            covariance_mat.append(weighted_cov_i)
+            total_covariance += weighted_cov_i
+
+        self.covariance_mat = covariance_mat
+        self.total_covariance = total_covariance
+        
+        return total_covariance
+            
+    def decision_boundary(self, pos_penalty=0.5, neg_penalty=0.5) : 
+        mean_vec = self.mean_vec
+        covariance = self.total_covariance
+        priori_prob = self.priori_prob
+        
+        weight = np.dot(np.linalg.inv(covariance), ((mean_vec[0] - mean_vec[1]).T))
+        #print("weight", weight)
+
+        log_term = (math.log(priori_prob[0]) - math.log(priori_prob[1])) + (math.log(neg_penalty) - math.log(pos_penalty))  
+        bias = -0.5 * np.dot(((mean_vec[0] + mean_vec[1])), weight) - log_term
+        #print("bias", bias)
+        
+        self.c1 = pos_penalty
+        self.c2 = neg_penalty
+        self.model_weight = weight
+        self.model_bias = bias
+        
+        return weight, bias
+    
+    def training_setting(self, data, label, pos_penalty=0.5, neg_penalty=0.5):
+        self.mean_vector(data, label)
+        self.priori_probability()
+        self.cov_mat()
+        self.decision_boundary(pos_penalty, neg_penalty)
+        self._fitted = True
+
+        return self.model_weight, self.model_bias
+    
+    def predict(self, input_data) : 
+        c1, c2 = self.c1 ,self.c2
+        input_data = np.asarray(input_data)
+        self.priori_probability()
+        
+        w, b = self.decision_boundary(c1, c2)
+        
+        pred_label = []
+        for x in input_data:
+            score = np.dot(w, x) + b
+            pred_label.append(self.labels[0] if score > 0 else self.labels[1])
+            
+        return np.asarray(pred_label)
+    
+# test data                   
+# X = ([1,2],[2,5],[3,2],[-4,-7],[-3,-2],[-2,0])
+# y = ([0,0,0,1,1,1])
+
+# LDA = LDA_classifier()
+# mean_vec = LDA.mean_vector(X, y)
+# print("mean : ", mean_vec)  # expect [2,3], [-3,-3]
+# #print("cov : ", LDA.cov_mat()) # expect  [ [1, 1.75],[1.75, 8] ]
+
+# prob = LDA.priori_probability()
+# #print(prob)
+
+# cov = LDA.cov_mat()
+
+# weight = LDA.decision_boundary(1,1) # expect weight : [5.9747, -0.557] bias : 2.9873
+
+# x_test = ([2,2], [1,1], [-1,-2],[-3,-5],[-1,-6])
+# y_test = [0,0,1,1,1]
+
+
+# LDA = LDA_classifier()
+# LDA.training_setting(X, y, pos_penalty=0.5, neg_penalty=0.5)
+# pred = LDA.predict(x_test)
+# print("pred:", pred)
