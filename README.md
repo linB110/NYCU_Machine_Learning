@@ -91,3 +91,14 @@ Perform **grid search** on the **RBF kernel SVM** to determine the best combinat
 
 ---
 
+## ⚙️ HW4 — SFS and Fisher's criterion
+
+### Dataset : `Breast Cancer dataset`
+
+### Objective
+
+Perform Selective Forward Selection with LDA classifier to find optimal subset of features
+
+
+---
+
