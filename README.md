@@ -93,12 +93,17 @@ Perform **grid search** on the **RBF kernel SVM** to determine the best combinat
 
 ## ⚙️ HW4 — SFS and Fisher's criterion
 
-### Dataset : `Breast Cancer dataset`
+### 📘 Dataset : `Breast Cancer dataset`
 
 ### Objective
 
 Perform Selective Forward Selection with LDA classifier to find optimal subset of features
 
+### Procedure
+
+1. Use SFS and LDA to find classified rate of feature combinations from num_features = 1 to 30
+2. Use Fisher's method to compute F score
+3. Use Fisher's criterion to find optimal subset of features
 
 ---
 
